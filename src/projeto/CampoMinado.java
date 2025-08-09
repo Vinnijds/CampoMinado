@@ -117,4 +117,8 @@ public class CampoMinado {
     public int getCOLUNAS() {
         return COLUNAS;
     }
+    
+    public int getNUMERO_DE_BOMBAS() {
+        return NUMERO_DE_BOMBAS;
+    }
 }

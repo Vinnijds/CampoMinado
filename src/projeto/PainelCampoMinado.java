@@ -4,61 +4,106 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.Objects;
+import javax.swing.Timer;
+import javax.swing.border.EmptyBorder;
 
 public class PainelCampoMinado extends JPanel {
 
+    private final MenuCampoMinado menuPrincipal;
     private final int LINHAS;
     private final int COLUNAS;
     private final int BOMBAS;
+    private final String NIVEL;
     private CampoMinado campoMinado;
     private final JButton[][] botoes;
     private boolean gameOver = false;
+    private boolean primeiroClique = true;
 
-    public PainelCampoMinado(int linhas, int colunas, int bombas) {
+    // Cronômetro
+    private Timer timer;
+    private long tempoDecorrido;
+    private JLabel timerLabel;
+
+    public PainelCampoMinado(MenuCampoMinado menu, int linhas, int colunas, int bombas, String nivel) {
+        this.menuPrincipal = menu;
         this.LINHAS = linhas;
         this.COLUNAS = colunas;
         this.BOMBAS = bombas;
+        this.NIVEL = nivel;
         this.botoes = new JButton[LINHAS][COLUNAS];
         
-        setLayout(new GridLayout(LINHAS, COLUNAS));
-        inicializarBotoes();
-        reiniciarJogo(); // Inicia o jogo automaticamente na primeira vez
+        setLayout(new BorderLayout());
+        
+        // Painel para o cronômetro
+        JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        timerLabel = new JLabel("Tempo: 0s");
+        timerLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        infoPanel.add(timerLabel);
+        add(infoPanel, BorderLayout.NORTH);
+
+        JPanel gridPanel = new JPanel(new GridLayout(LINHAS, COLUNAS));
+        gridPanel.setBorder(new EmptyBorder(10, 10, 10, 10)); // Adiciona uma margem
+        inicializarBotoes(gridPanel);
+        add(gridPanel, BorderLayout.CENTER);
+        
+        reiniciarJogo();
     }
 
-    private void inicializarBotoes() {
+    private void inicializarBotoes(JPanel gridPanel) {
         for (int i = 0; i < LINHAS; i++) {
             for (int j = 0; j < COLUNAS; j++) {
                 JButton botao = new JButton();
-                botao.setPreferredSize(new Dimension(50, 50));
-                botao.setFont(new Font("Arial", Font.BOLD, 20));
+                // A linha abaixo foi removida para que o tamanho seja uniforme
+                // botao.setPreferredSize(new Dimension(30, 30));
+                botao.setFont(new Font("Arial", Font.BOLD, 14));
                 
                 final int linha = i;
-                final int coluna = j;
+                final int int_coluna = j;
 
                 botao.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mousePressed(MouseEvent e) {
-                        if (gameOver || campoMinado.estaRevelado(linha, coluna)) {
+                        if (gameOver || campoMinado.estaRevelado(linha, int_coluna)) {
                             return;
                         }
+                        
+                        if (primeiroClique) {
+                            iniciarCronometro();
+                            primeiroClique = false;
+                        }
 
-                        if (e.getButton() == MouseEvent.BUTTON1) { // Botão Esquerdo
-                            clicarQuadrado(linha, coluna);
-                        } else if (e.getButton() == MouseEvent.BUTTON3) { // Botão Direito
-                            marcarQuadrado(linha, coluna);
+                        if (e.getButton() == MouseEvent.BUTTON1) {
+                            clicarQuadrado(linha, int_coluna);
+                        } else if (e.getButton() == MouseEvent.BUTTON3) {
+                            marcarQuadrado(linha, int_coluna);
                         }
                     }
                 });
                 botoes[i][j] = botao;
-                add(botao);
+                gridPanel.add(botao);
             }
+        }
+    }
+
+    private void iniciarCronometro() {
+        tempoDecorrido = 0;
+        timer = new Timer(1000, e -> {
+            tempoDecorrido++;
+            timerLabel.setText("Tempo: " + tempoDecorrido + "s");
+        });
+        timer.start();
+    }
+    
+    private void pararCronometro() {
+        if (timer != null) {
+            timer.stop();
         }
     }
 
     private void clicarQuadrado(int linha, int coluna) {
         if (campoMinado.getValor(linha, coluna) == -1) {
             gameOver = true;
+            pararCronometro();
             revelarTodasBombas();
             mostrarMenuGameOver("KABUMMMMM! Você perdeu!", "Fim de Jogo");
         } else {
@@ -66,7 +111,8 @@ public class PainelCampoMinado extends JPanel {
             atualizarInterface();
             if (campoMinado.verificarVitoria()) {
                 gameOver = true;
-                mostrarMenuGameOver("Parabéns! Você venceu!", "Vitória");
+                pararCronometro();
+                mostrarMenuGameOver("Parabéns! Você venceu em " + tempoDecorrido + "s!", "Vitória");
             }
         }
     }
@@ -86,17 +132,17 @@ public class PainelCampoMinado extends JPanel {
                     int valor = campoMinado.getValor(i, j);
                     if (valor > 0) {
                         botao.setText(String.valueOf(valor));
-                        // Adicionando cores aos números para ficar mais bonito
                         switch (valor) {
                             case 1: botao.setForeground(Color.BLUE); break;
-                            case 2: botao.setForeground(Color.GREEN.darker()); break;
+                            case 2: botao.setForeground(new Color(34, 139, 34)); break;
                             case 3: botao.setForeground(Color.RED); break;
-                            case 4: botao.setForeground(Color.MAGENTA); break;
+                            case 4: botao.setForeground(new Color(128, 0, 128)); break;
+                            case 5: botao.setForeground(new Color(255, 140, 0)); break;
+                            case 6: botao.setForeground(new Color(0, 139, 139)); break;
+                            case 7: botao.setForeground(Color.BLACK); break;
+                            case 8: botao.setForeground(Color.DARK_GRAY); break;
                             default: botao.setForeground(Color.BLACK); break;
                         }
-                    } else if (valor == -1) {
-                        botao.setText("X");
-                        botao.setBackground(Color.RED);
                     } else {
                          botao.setText("");
                     }
@@ -107,7 +153,7 @@ public class PainelCampoMinado extends JPanel {
                 } else {
                     botao.setText("");
                     botao.setEnabled(true);
-                    botao.setBackground(null);
+                    botao.setBackground(UIManager.getColor("Button.background"));
                 }
             }
         }
@@ -126,11 +172,18 @@ public class PainelCampoMinado extends JPanel {
     }
     
     private void mostrarMenuGameOver(String mensagem, String titulo) {
-        Object[] opcoes = {"Reiniciar", "Sair"};
+        if (titulo.equals("Vitória") && menuPrincipal.isNewRecord(NIVEL, tempoDecorrido)) {
+            JOptionPane.showMessageDialog(this, mensagem + "\nNovo recorde para o nível " + NIVEL + "!", "Vitória", JOptionPane.INFORMATION_MESSAGE);
+            menuPrincipal.setRecord(NIVEL, tempoDecorrido);
+        } else {
+            JOptionPane.showMessageDialog(this, mensagem, titulo, JOptionPane.INFORMATION_MESSAGE);
+        }
+        
+        Object[] opcoes = {"Reiniciar", "Voltar para o Menu"};
         int escolha = JOptionPane.showOptionDialog(
             this,
-            mensagem,
-            titulo,
+            "O que você gostaria de fazer?",
+            "Opções",
             JOptionPane.YES_NO_OPTION,
             JOptionPane.QUESTION_MESSAGE,
             null,
@@ -141,21 +194,24 @@ public class PainelCampoMinado extends JPanel {
         if (escolha == JOptionPane.YES_OPTION) {
             reiniciarJogo();
         } else if (escolha == JOptionPane.NO_OPTION) {
-            System.exit(0);
+            menuPrincipal.voltarParaMenu();
         }
     }
     
     private void reiniciarJogo() {
         campoMinado = new CampoMinado(LINHAS, COLUNAS, BOMBAS);
         gameOver = false;
+        primeiroClique = true;
+        pararCronometro();
+        tempoDecorrido = 0;
+        timerLabel.setText("Tempo: 0s");
         
-        // Reinicializa todos os botões para o estado inicial
         for (int i = 0; i < LINHAS; i++) {
             for (int j = 0; j < COLUNAS; j++) {
                 JButton botao = botoes[i][j];
                 botao.setText("");
                 botao.setEnabled(true);
-                botao.setBackground(null);
+                botao.setBackground(UIManager.getColor("Button.background"));
             }
         }
     }
